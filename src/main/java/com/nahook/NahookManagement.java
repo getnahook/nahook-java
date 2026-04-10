@@ -9,7 +9,7 @@ import java.time.Duration;
  * Client for the Nahook management API.
  * Management clients do not support retries.
  */
-public class NahookManagement {
+public final class NahookManagement {
 
     private final EndpointsResource endpoints;
     private final EventTypesResource eventTypes;

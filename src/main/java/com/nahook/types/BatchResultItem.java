@@ -3,7 +3,6 @@ package com.nahook.types;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
-import java.util.Map;
 
 public class BatchResultItem {
 
@@ -13,7 +12,7 @@ public class BatchResultItem {
     private final String eventTypeId;
     private final List<String> deliveryIds;
     private final String status;
-    private final Map<String, String> error;
+    private final BatchItemError error;
 
     @JsonCreator
     public BatchResultItem(
@@ -23,7 +22,7 @@ public class BatchResultItem {
             @JsonProperty("eventTypeId") String eventTypeId,
             @JsonProperty("deliveryIds") List<String> deliveryIds,
             @JsonProperty("status") String status,
-            @JsonProperty("error") Map<String, String> error) {
+            @JsonProperty("error") BatchItemError error) {
         this.index = index;
         this.deliveryId = deliveryId;
         this.idempotencyKey = idempotencyKey;
@@ -39,5 +38,5 @@ public class BatchResultItem {
     public String getEventTypeId() { return eventTypeId; }
     public List<String> getDeliveryIds() { return deliveryIds; }
     public String getStatus() { return status; }
-    public Map<String, String> getError() { return error; }
+    public BatchItemError getError() { return error; }
 }

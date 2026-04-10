@@ -3,12 +3,12 @@ package com.nahook.errors;
 /**
  * Request timed out.
  */
-public class NahookTimeoutError extends NahookError {
+public class NahookTimeoutException extends NahookException {
 
     private final long timeoutMs;
 
-    public NahookTimeoutError(long timeoutMs) {
-        super("Request timed out after " + timeoutMs + "ms");
+    public NahookTimeoutException(long timeoutMs, Throwable cause) {
+        super("Request timed out after " + timeoutMs + "ms", cause);
         this.timeoutMs = timeoutMs;
     }
 

@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * Client for the Nahook ingestion API.
  */
-public class NahookClient {
+public final class NahookClient {
 
     private final HttpClientWrapper http;
 

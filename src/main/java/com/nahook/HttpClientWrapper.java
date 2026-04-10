@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nahook.errors.NahookAPIError;
-import com.nahook.errors.NahookNetworkError;
-import com.nahook.errors.NahookTimeoutError;
+import com.nahook.errors.NahookApiException;
+import com.nahook.errors.NahookNetworkException;
+import com.nahook.errors.NahookTimeoutException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Internal HTTP layer with retry logic.
  */
-class HttpClientWrapper {
+public class HttpClientWrapper {
 
     private static final String DEFAULT_BASE_URL = "https://api.nahook.com";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
@@ -40,7 +40,7 @@ class HttpClientWrapper {
     private final int retries;
     private final HttpClient httpClient;
 
-    HttpClientWrapper(String token, String baseUrl, Duration timeout, Integer retries) {
+    public HttpClientWrapper(String token, String baseUrl, Duration timeout, Integer retries) {
         this.token = token;
         this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/+$", "") : DEFAULT_BASE_URL;
         this.timeout = timeout != null ? timeout : DEFAULT_TIMEOUT;
@@ -50,11 +50,11 @@ class HttpClientWrapper {
                 .build();
     }
 
-    <T> T request(String method, String path, Object body, Class<T> responseType) {
+    public <T> T request(String method, String path, Object body, Class<T> responseType) {
         return request(method, path, body, null, responseType);
     }
 
-    <T> T request(String method, String path, Object body, Map<String, Object> query, Class<T> responseType) {
+    public <T> T request(String method, String path, Object body, Map<String, Object> query, Class<T> responseType) {
         HttpResponse<String> response = executeWithRetry(method, path, body, query);
         if (response.statusCode() == 204) {
             return null;
@@ -62,11 +62,11 @@ class HttpClientWrapper {
         try {
             return MAPPER.readValue(response.body(), responseType);
         } catch (JsonProcessingException e) {
-            throw new NahookNetworkError(e);
+            throw new NahookNetworkException(e);
         }
     }
 
-    String requestRaw(String method, String path, Object body) {
+    public String requestRaw(String method, String path, Object body) {
         HttpResponse<String> response = executeWithRetry(method, path, body, null);
         return response.body();
     }
@@ -78,14 +78,14 @@ class HttpClientWrapper {
         for (int attempt = 0; attempt <= retries; attempt++) {
             if (attempt > 0) {
                 long retryAfterMs = 0;
-                if (lastError instanceof NahookAPIError) {
-                    Integer ra = ((NahookAPIError) lastError).getRetryAfter();
+                if (lastError instanceof NahookApiException) {
+                    Integer ra = ((NahookApiException) lastError).getRetryAfter();
                     retryAfterMs = ra != null ? ra * 1000L : 0;
                 }
                 long delay = calculateDelay(attempt - 1, retryAfterMs);
                 try { Thread.sleep(delay); } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new NahookNetworkError(e);
+                    throw new NahookNetworkException(e);
                 }
             }
 
@@ -112,7 +112,7 @@ class HttpClientWrapper {
                     return response;
                 }
 
-                NahookAPIError apiError = parseError(response);
+                NahookApiException apiError = parseError(response);
                 if (attempt < retries && apiError.isRetryable()) {
                     lastError = apiError;
                     continue;
@@ -120,17 +120,17 @@ class HttpClientWrapper {
                 throw apiError;
 
             } catch (java.net.http.HttpTimeoutException e) {
-                NahookTimeoutError te = new NahookTimeoutError(timeout.toMillis());
+                NahookTimeoutException te = new NahookTimeoutException(timeout.toMillis(), e);
                 if (attempt < retries) { lastError = te; continue; }
                 throw te;
             } catch (IOException e) {
-                NahookNetworkError ne = new NahookNetworkError(e);
+                NahookNetworkException ne = new NahookNetworkException(e);
                 if (attempt < retries) { lastError = ne; continue; }
                 throw ne;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new NahookNetworkError(e);
-            } catch (NahookAPIError e) {
+                throw new NahookNetworkException(e);
+            } catch (NahookApiException e) {
                 throw e;
             } catch (RuntimeException e) {
                 throw e;
@@ -138,10 +138,10 @@ class HttpClientWrapper {
         }
 
         if (lastError instanceof RuntimeException) throw (RuntimeException) lastError;
-        throw new NahookNetworkError(new RuntimeException("Request failed after retries"));
+        throw new NahookNetworkException(new RuntimeException("Request failed after retries"));
     }
 
-    private NahookAPIError parseError(HttpResponse<String> response) {
+    private NahookApiException parseError(HttpResponse<String> response) {
         Integer retryAfter = null;
         String raHeader = response.headers().firstValue("retry-after").orElse(null);
         if (raHeader != null) {
@@ -153,9 +153,9 @@ class HttpClientWrapper {
             JsonNode errorNode = root.path("error");
             String code = errorNode.path("code").asText("unknown");
             String message = errorNode.path("message").asText(String.valueOf(response.statusCode()));
-            return new NahookAPIError(response.statusCode(), code, message, retryAfter);
+            return new NahookApiException(response.statusCode(), code, message, retryAfter);
         } catch (Exception e) {
-            return new NahookAPIError(response.statusCode(), "unknown",
+            return new NahookApiException(response.statusCode(), "unknown",
                     String.valueOf(response.statusCode()), retryAfter);
         }
     }
@@ -178,7 +178,7 @@ class HttpClientWrapper {
         return sb.toString();
     }
 
-    static String encodePath(String segment) {
+    public static String encodePath(String segment) {
         return URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20");
     }
 

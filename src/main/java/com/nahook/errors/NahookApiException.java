@@ -3,13 +3,13 @@ package com.nahook.errors;
 /**
  * API returned an error response (4xx/5xx).
  */
-public class NahookAPIError extends NahookError {
+public class NahookApiException extends NahookException {
 
     private final int status;
     private final String code;
     private final Integer retryAfter;
 
-    public NahookAPIError(int status, String code, String message, Integer retryAfter) {
+    public NahookApiException(int status, String code, String message, Integer retryAfter) {
         super(message);
         this.status = status;
         this.code = code;
