@@ -31,6 +31,24 @@ public class HttpClientWrapper {
     private static final long BASE_DELAY_MS = 500;
     private static final long MAX_DELAY_MS = 10_000;
 
+    private static final Map<String, String> REGION_BASE_URLS = Map.of(
+            "us", "https://us.api.nahook.com",
+            "eu", "https://eu.api.nahook.com",
+            "ap", "https://ap.api.nahook.com"
+    );
+
+    /**
+     * Extract region slug from an nhk_ API key and resolve its base URL.
+     */
+    static String resolveBaseUrl(String token) {
+        if (token != null && token.length() >= 7 && token.startsWith("nhk_") && token.charAt(6) == '_') {
+            String slug = token.substring(4, 6);
+            String url = REGION_BASE_URLS.get(slug);
+            if (url != null) return url;
+        }
+        return DEFAULT_BASE_URL;
+    }
+
     static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -42,7 +60,7 @@ public class HttpClientWrapper {
 
     public HttpClientWrapper(String token, String baseUrl, Duration timeout, Integer retries) {
         this.token = token;
-        this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/+$", "") : DEFAULT_BASE_URL;
+        this.baseUrl = baseUrl != null ? baseUrl.replaceAll("/+$", "") : resolveBaseUrl(token);
         this.timeout = timeout != null ? timeout : DEFAULT_TIMEOUT;
         this.retries = retries != null ? retries : 0;
         this.httpClient = HttpClient.newBuilder()
