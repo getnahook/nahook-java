@@ -243,11 +243,112 @@ class ManagementIntegrationTest {
     }
 
     // ---------------------------------------------------------------
-    // Auth error: bad token
+    // Environments CRUD
     // ---------------------------------------------------------------
 
     @Test
     @Order(5)
+    void environments_crud_fullLifecycle() {
+        long ts = System.currentTimeMillis();
+        String envName = "Test Env " + ts;
+        String envSlug = "test-env-" + ts;
+
+        // Create
+        Environment created = mgmt.environments().create(workspaceId,
+                new CreateEnvironmentOptions(envName, envSlug));
+        assertNotNull(created.getId());
+        assertEquals(envName, created.getName());
+        assertEquals(envSlug, created.getSlug());
+
+        String envId = created.getId();
+
+        // List — should contain at least the default env + the newly created one
+        ListResult<Environment> list = mgmt.environments().list(workspaceId);
+        assertNotNull(list.getData());
+        assertTrue(list.getData().size() >= 2,
+                "should have at least 2 environments (default + created)");
+        assertTrue(list.getData().stream().anyMatch(e -> e.getId().equals(envId)),
+                "listed environments should contain the newly created one");
+
+        // Get
+        Environment fetched = mgmt.environments().get(workspaceId, envId);
+        assertEquals(envId, fetched.getId());
+        assertEquals(envName, fetched.getName());
+
+        // Update
+        String updatedName = "Updated Env " + ts;
+        Environment updated = mgmt.environments().update(workspaceId, envId,
+                new UpdateEnvironmentOptions(updatedName));
+        assertEquals(envId, updated.getId());
+        assertEquals(updatedName, updated.getName());
+
+        // Delete
+        assertDoesNotThrow(() -> mgmt.environments().delete(workspaceId, envId));
+
+        // Verify 404 on deleted
+        NahookApiException ex = assertThrows(NahookApiException.class, () ->
+                mgmt.environments().get(workspaceId, envId));
+        assertEquals(404, ex.getStatus());
+        assertTrue(ex.isNotFound());
+    }
+
+    // ---------------------------------------------------------------
+    // Event Type Visibility
+    // ---------------------------------------------------------------
+
+    @Test
+    @Order(6)
+    void environments_eventTypeVisibility() {
+        long ts = System.currentTimeMillis();
+
+        // Create an environment and an event type for the visibility test
+        Environment env = mgmt.environments().create(workspaceId,
+                new CreateEnvironmentOptions("Vis Env " + ts, "vis-env-" + ts));
+        assertNotNull(env.getId());
+
+        String eventTypeName = "vis.test.event." + ts;
+        EventType eventType = mgmt.eventTypes().create(workspaceId,
+                new CreateEventTypeOptions(eventTypeName, "Visibility test event type"));
+        assertNotNull(eventType.getId());
+
+        String envId = env.getId();
+        String eventTypeId = eventType.getId();
+
+        try {
+            // List visibility — should contain the event type
+            ListResult<EventTypeVisibility> visList = mgmt.environments()
+                    .listEventTypeVisibility(workspaceId, envId);
+            assertNotNull(visList.getData());
+            assertTrue(visList.getData().stream().anyMatch(v -> v.getEventTypeId().equals(eventTypeId)),
+                    "visibility list should contain the created event type");
+
+            // Set published = true
+            EventTypeVisibility result = mgmt.environments()
+                    .setEventTypeVisibility(workspaceId, envId, eventTypeId,
+                            new SetVisibilityOptions(true));
+            assertEquals(eventTypeId, result.getEventTypeId());
+            assertTrue(result.isPublished());
+
+            // Verify via list
+            ListResult<EventTypeVisibility> visListAfter = mgmt.environments()
+                    .listEventTypeVisibility(workspaceId, envId);
+            EventTypeVisibility found = visListAfter.getData().stream()
+                    .filter(v -> v.getEventTypeId().equals(eventTypeId))
+                    .findFirst()
+                    .orElseThrow();
+            assertTrue(found.isPublished());
+        } finally {
+            try { mgmt.environments().delete(workspaceId, envId); } catch (Exception ignored) {}
+            try { mgmt.eventTypes().delete(workspaceId, eventTypeId); } catch (Exception ignored) {}
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Auth error: bad token
+    // ---------------------------------------------------------------
+
+    @Test
+    @Order(7)
     void invalidToken_throws401() {
         NahookManagement badMgmt = NahookManagement.builder("nhm_invalid_000000000000")
                 .baseUrl(apiUrl)
