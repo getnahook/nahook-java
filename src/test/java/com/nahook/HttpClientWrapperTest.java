@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -69,37 +69,27 @@ class HttpClientWrapperTest {
     @DisplayName("calculateDelay")
     class CalculateDelay {
 
-        /**
-         * Invoke the private static calculateDelay via reflection.
-         */
-        private long invokeCalculateDelay(int attempt, long retryAfterMs) throws Exception {
-            Method m = HttpClientWrapper.class.getDeclaredMethod(
-                    "calculateDelay", int.class, long.class);
-            m.setAccessible(true);
-            return (long) m.invoke(null, attempt, retryAfterMs);
-        }
-
         @RepeatedTest(20)
-        void delayIsBetweenZeroAndExponentialCap() throws Exception {
+        void delayIsBetweenZeroAndExponentialCap() {
             int attempt = 2; // exponential = min(10_000, 500 * 4) = 2000
-            long delay = invokeCalculateDelay(attempt, 0);
+            long delay = HttpClientWrapper.calculateDelay(attempt, 0);
             assertTrue(delay >= 0, "delay must be >= 0, got " + delay);
             assertTrue(delay <= 2000, "delay must be <= 2000 for attempt 2, got " + delay);
         }
 
         @RepeatedTest(20)
-        void delayCapsAtMaxDelayMs() throws Exception {
+        void delayCapsAtMaxDelayMs() {
             // attempt=10 → 500 * 1024 = 512_000, capped to MAX_DELAY_MS = 10_000
-            long delay = invokeCalculateDelay(10, 0);
+            long delay = HttpClientWrapper.calculateDelay(10, 0);
             assertTrue(delay >= 0, "delay must be >= 0, got " + delay);
             assertTrue(delay <= 10_000,
                     "delay must be <= MAX_DELAY_MS (10000) for large attempt, got " + delay);
         }
 
         @Test
-        void retryAfterMsIsUsedWhenProvided() throws Exception {
+        void retryAfterMsIsUsedWhenProvided() {
             long retryAfterMs = 5000;
-            long delay = invokeCalculateDelay(0, retryAfterMs);
+            long delay = HttpClientWrapper.calculateDelay(0, retryAfterMs);
             assertEquals(retryAfterMs, delay,
                     "calculateDelay should return retryAfterMs when it is > 0");
         }

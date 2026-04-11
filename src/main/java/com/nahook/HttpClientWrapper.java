@@ -200,7 +200,7 @@ public class HttpClientWrapper {
         return URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
-    private static long calculateDelay(int attempt, long retryAfterMs) {
+    static long calculateDelay(int attempt, long retryAfterMs) {
         if (retryAfterMs > 0) return retryAfterMs;
         long exponential = Math.min(MAX_DELAY_MS, BASE_DELAY_MS * (1L << attempt));
         return (long) (exponential * ThreadLocalRandom.current().nextDouble());
