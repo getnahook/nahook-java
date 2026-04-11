@@ -20,10 +20,10 @@ public class SubscriptionsResource {
         return new ListResult<>(Arrays.asList(arr));
     }
 
-    public Subscription create(String workspaceId, String endpointId, CreateSubscriptionOptions options) {
+    public SubscribeResult create(String workspaceId, String endpointId, CreateSubscriptionOptions options) {
         String path = "/management/v1/workspaces/" + HttpClientWrapper.encodePath(workspaceId)
                 + "/endpoints/" + HttpClientWrapper.encodePath(endpointId) + "/subscriptions";
-        return http.request("POST", path, options, Subscription.class);
+        return http.request("POST", path, options, SubscribeResult.class);
     }
 
     public void delete(String workspaceId, String endpointId, String eventTypeId) {

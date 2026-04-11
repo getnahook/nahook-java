@@ -2,9 +2,19 @@ package com.nahook.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class CreateSubscriptionOptions {
-    @JsonProperty("eventTypeId") private final String eventTypeId;
+import java.util.Arrays;
+import java.util.List;
 
-    public CreateSubscriptionOptions(String eventTypeId) { this.eventTypeId = eventTypeId; }
-    public String getEventTypeId() { return eventTypeId; }
+public class CreateSubscriptionOptions {
+    @JsonProperty("eventTypeIds") private final List<String> eventTypeIds;
+
+    public CreateSubscriptionOptions(List<String> eventTypeIds) {
+        this.eventTypeIds = eventTypeIds;
+    }
+
+    public CreateSubscriptionOptions(String... eventTypeIds) {
+        this.eventTypeIds = Arrays.asList(eventTypeIds);
+    }
+
+    public List<String> getEventTypeIds() { return eventTypeIds; }
 }
