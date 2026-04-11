@@ -16,6 +16,7 @@ public final class NahookManagement {
     private final ApplicationsResource applications;
     private final SubscriptionsResource subscriptions;
     private final PortalSessionsResource portalSessions;
+    private final EnvironmentsResource environments;
 
     /**
      * Create a management client with default options.
@@ -46,6 +47,7 @@ public final class NahookManagement {
         this.applications = new ApplicationsResource(http);
         this.subscriptions = new SubscriptionsResource(http);
         this.portalSessions = new PortalSessionsResource(http);
+        this.environments = new EnvironmentsResource(http);
     }
 
     private NahookManagement(Builder builder) {
@@ -58,6 +60,7 @@ public final class NahookManagement {
         this.applications = new ApplicationsResource(http);
         this.subscriptions = new SubscriptionsResource(http);
         this.portalSessions = new PortalSessionsResource(http);
+        this.environments = new EnvironmentsResource(http);
     }
 
     public static Builder builder(String token) { return new Builder(token); }
@@ -67,6 +70,7 @@ public final class NahookManagement {
     public ApplicationsResource applications() { return applications; }
     public SubscriptionsResource subscriptions() { return subscriptions; }
     public PortalSessionsResource portalSessions() { return portalSessions; }
+    public EnvironmentsResource environments() { return environments; }
 
     public static class Builder {
         private final String token;
