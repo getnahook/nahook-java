@@ -7,7 +7,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class UpdateEnvironmentOptions {
     @JsonProperty("name") private final String name;
 
-    public UpdateEnvironmentOptions(String name) {
+    private UpdateEnvironmentOptions(String name) {
         this.name = name;
+    }
+
+    public static UpdateEnvironmentOptions withName(String name) {
+        return new UpdateEnvironmentOptions(name);
     }
 }
