@@ -278,7 +278,7 @@ class ManagementIntegrationTest {
         // Update
         String updatedName = "Updated Env " + ts;
         Environment updated = mgmt.environments().update(workspaceId, envId,
-                new UpdateEnvironmentOptions(updatedName));
+                UpdateEnvironmentOptions.withName(updatedName));
         assertEquals(envId, updated.getId());
         assertEquals(updatedName, updated.getName());
 
