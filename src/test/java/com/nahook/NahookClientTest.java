@@ -74,6 +74,27 @@ class NahookClientTest {
                 "NahookManagement.Builder should not expose a retries() method");
     }
 
+    // ---- Management resource accessors ----
+
+    @Test
+    void testManagementHasEnvironmentsResource() {
+        NahookManagement mgmt = new NahookManagement("nhm_test123");
+        assertNotNull(mgmt.environments(), "environments() should not be null");
+    }
+
+    @Test
+    void testEnvironmentsResourceHasAllMethods() throws Exception {
+        Class<?> clazz = com.nahook.resources.EnvironmentsResource.class;
+
+        assertNotNull(clazz.getMethod("list", String.class));
+        assertNotNull(clazz.getMethod("create", String.class, com.nahook.types.CreateEnvironmentOptions.class));
+        assertNotNull(clazz.getMethod("get", String.class, String.class));
+        assertNotNull(clazz.getMethod("update", String.class, String.class, com.nahook.types.UpdateEnvironmentOptions.class));
+        assertNotNull(clazz.getMethod("delete", String.class, String.class));
+        assertNotNull(clazz.getMethod("listEventTypeVisibility", String.class, String.class));
+        assertNotNull(clazz.getMethod("setEventTypeVisibility", String.class, String.class, String.class, com.nahook.types.SetVisibilityOptions.class));
+    }
+
     // ---- Exception hierarchy ----
 
     @Test
