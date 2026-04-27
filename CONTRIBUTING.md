@@ -11,7 +11,7 @@ This repository is a **subtree-split mirror** of the Java SDK from our private m
 - **Bug reports** — open a GitHub issue with: reproduction steps, SDK version, Java version (`java -version`), OS.
 - **Feature requests** — open an issue describing the use case and the API surface you'd want.
 - **Small code suggestions** — paste a snippet in an issue and describe intent; we'll port it into the monorepo and credit you in the resulting commit.
-- **Substantial patches** — email `support@nahook.com` first; we'll either discuss read access to the monorepo or hand-port your change with credit.
+- **Substantial patches** — email `support@nahook.com` first; we'll hand-port your change into the monorepo and credit you in the resulting commit.
 
 ## Local development
 
@@ -19,7 +19,7 @@ This repository is a **subtree-split mirror** of the Java SDK from our private m
 git clone https://github.com/getnahook/nahook-java
 cd nahook-java
 mvn compile
-mvn test                              # 152 tests
+mvn test                              # full unit test suite
 mvn package -DskipTests               # produces nahook-java-X.Y.Z.jar
 ```
 
