@@ -22,14 +22,14 @@
 
     <scm>
         <url>https://github.com/getnahook/nahook-java</url>
-        <connection>scm:git:git://github.com/getnahook/nahook-java.git</connection>
+        <connection>scm:git:https://github.com/getnahook/nahook-java.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/getnahook/nahook-java.git</developerConnection>
     </scm>
 
     <developers>
         <developer>
             <name>Nahook Team</name>
-            <email>team@nahook.com</email>
+            <email>support@nahook.com</email>
             <organization>Nahook</organization>
             <organizationUrl>https://nahook.com</organizationUrl>
         </developer>
