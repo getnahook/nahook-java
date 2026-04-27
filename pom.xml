@@ -13,6 +13,11 @@
     <description>Official Java SDK for the Nahook webhook platform</description>
     <url>https://nahook.com</url>
 
+    <organization>
+        <name>Nahook</name>
+        <url>https://nahook.com</url>
+    </organization>
+
     <licenses>
         <license>
             <name>MIT License</name>
@@ -28,7 +33,7 @@
 
     <developers>
         <developer>
-            <name>Nahook Team</name>
+            <name>Nahook</name>
             <email>support@nahook.com</email>
             <organization>Nahook</organization>
             <organizationUrl>https://nahook.com</organizationUrl>
