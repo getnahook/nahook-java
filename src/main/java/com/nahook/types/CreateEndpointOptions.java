@@ -13,11 +13,17 @@ public class CreateEndpointOptions {
     @JsonProperty("config") private final Map<String, Object> config;
     @JsonProperty("authUsername") private final String authUsername;
     @JsonProperty("authPassword") private final String authPassword;
+    /**
+     * Public id (e.g. {@code env_abc123}) of the environment to scope this endpoint.
+     * If omitted, the workspace's default environment is used.
+     */
+    @JsonProperty("environmentId") private final String environmentId;
 
     private CreateEndpointOptions(Builder b) {
         this.url = b.url; this.type = b.type; this.description = b.description;
         this.metadata = b.metadata; this.config = b.config;
         this.authUsername = b.authUsername; this.authPassword = b.authPassword;
+        this.environmentId = b.environmentId;
     }
 
     public static Builder builder(String url) { return new Builder(url); }
@@ -30,6 +36,7 @@ public class CreateEndpointOptions {
         private Map<String, Object> config;
         private String authUsername;
         private String authPassword;
+        private String environmentId;
 
         public Builder(String url) { this.url = url; }
         public Builder type(String type) { this.type = type; return this; }
@@ -38,6 +45,11 @@ public class CreateEndpointOptions {
         public Builder config(Map<String, Object> config) { this.config = config; return this; }
         public Builder authUsername(String authUsername) { this.authUsername = authUsername; return this; }
         public Builder authPassword(String authPassword) { this.authPassword = authPassword; return this; }
+        /**
+         * Optional. Public id (e.g. {@code env_abc123}) of the environment to scope this endpoint.
+         * If omitted, the workspace's default environment is used.
+         */
+        public Builder environmentId(String environmentId) { this.environmentId = environmentId; return this; }
         public CreateEndpointOptions build() { return new CreateEndpointOptions(this); }
     }
 }
