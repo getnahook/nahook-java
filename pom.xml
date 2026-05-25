@@ -145,6 +145,14 @@
                                 <id>sign-artifacts</id>
                                 <phase>verify</phase>
                                 <goals><goal>sign</goal></goals>
+                                <configuration>
+                                    <!-- loopback lets CI provide passphrase via env (gpg.passphrase); -->
+                                    <!-- local runs with gpg-agent cache are unaffected.              -->
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
