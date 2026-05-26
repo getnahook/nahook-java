@@ -117,7 +117,10 @@ class ClientIntegrationTest {
         Map<String, Object> payload = Map.of("data", "noop");
         TriggerOptions opts = new TriggerOptions(payload);
 
-        TriggerResult result = client.trigger("unsubscribed.event.type", opts);
+        // Pre-seeded fixture event type with zero subscriptions — shared across
+        // all SDK integration tests. See packages/db/src/seeds/test-fixtures.sql
+        // section 8b.
+        TriggerResult result = client.trigger("event.type.nobody.subscribed.to", opts);
 
         assertEquals("accepted", result.getStatus());
         assertNotNull(result.getDeliveryIds());
