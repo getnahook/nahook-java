@@ -278,6 +278,52 @@ PortalSession session = mgmt.portalSessions().create("ws_abc", "app_123",
 // session.getExpiresAt() -> expiration timestamp
 ```
 
+### Deliveries
+
+Read access to webhook delivery state, attempts, and (on Pro and above) the
+original decrypted payload.
+
+```java
+import com.fasterxml.jackson.databind.JsonNode;
+import com.nahook.types.Delivery;
+import com.nahook.types.DeliveryAttempt;
+import com.nahook.types.DeliveryWithPayload;
+import com.nahook.types.GetDeliveryOptions;
+import com.nahook.types.ListDeliveriesOptions;
+import com.nahook.types.PaginatedResult;
+
+// Paginated list, newest-first. `nextCursor` is an opaque encrypted token —
+// pass it back verbatim, do not decode or modify it.
+PaginatedResult<Delivery> page = mgmt.deliveries().list("ws_abc", "ep_123",
+    ListDeliveriesOptions.builder().limit(50).build());
+// page.getData()       -> List<Delivery>
+// page.getNextCursor() -> String, or null on the last page
+
+if (page.getNextCursor() != null) {
+    PaginatedResult<Delivery> next = mgmt.deliveries().list("ws_abc", "ep_123",
+        ListDeliveriesOptions.builder().cursor(page.getNextCursor()).build());
+}
+
+// Filter by status
+PaginatedResult<Delivery> failed = mgmt.deliveries().list("ws_abc", "ep_123",
+    ListDeliveriesOptions.builder().status("failed").build());
+
+// Get a single delivery's status + metadata
+DeliveryWithPayload delivery = mgmt.deliveries().get("ws_abc", "del_xyz");
+
+// Get a delivery with its decrypted payload. The response wraps the body in
+// an envelope whose `status` field describes whether the payload is available,
+// gated by plan ("forbidden"), still in flight ("processing"), or absent.
+DeliveryWithPayload withPayload = mgmt.deliveries().get("ws_abc", "del_xyz",
+    GetDeliveryOptions.builder().includePayload(true).build());
+if (withPayload.getPayload() != null && "available".equals(withPayload.getPayload().getStatus())) {
+    JsonNode body = withPayload.getPayload().getData(); // the original webhook body
+}
+
+// List the attempt history for a delivery
+List<DeliveryAttempt> attempts = mgmt.deliveries().getAttempts("ws_abc", "del_xyz");
+```
+
 ---
 
 ## Error Handling

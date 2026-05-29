@@ -407,6 +407,118 @@ class ManagementResourcesTest {
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // Deliveries
+    // ══════════════════════════════════════════════════════════════════
+
+    @Test
+    void deliveriesListReturnsPaginatedDataAndNextCursor() throws Exception {
+        enqueueJson(200, "{\"deliveries\":["
+                + "{\"id\":\"del_a\",\"idempotencyKey\":\"k1\",\"endpointId\":\"ep_1\",\"status\":\"delivered\",\"totalAttempts\":1,\"firstAttemptAt\":\"2026-05-28T14:30:59Z\",\"deliveredAt\":\"2026-05-28T14:30:59Z\",\"nextRetryAt\":null,\"hasPayload\":true,\"createdAt\":\"2026-05-28T14:30:59Z\",\"updatedAt\":\"2026-05-28T14:30:59Z\"},"
+                + "{\"id\":\"del_b\",\"idempotencyKey\":\"k2\",\"endpointId\":\"ep_1\",\"status\":\"failed\",\"totalAttempts\":3,\"firstAttemptAt\":\"2026-05-28T14:31:00Z\",\"deliveredAt\":null,\"nextRetryAt\":null,\"hasPayload\":false,\"createdAt\":\"2026-05-28T14:31:00Z\",\"updatedAt\":\"2026-05-28T14:31:00Z\"}"
+                + "],\"nextCursor\":\"opaque-token-aaa\"}");
+        var result = mgmt.deliveries().list("ws_abc", "ep_1");
+        var req = takeRequest();
+        assertEquals("GET", req.getMethod());
+        assertEquals("/management/v1/workspaces/ws_abc/endpoints/ep_1/deliveries", req.getPath());
+        assertEquals(2, result.getData().size());
+        assertEquals("del_a", result.getData().get(0).getId());
+        assertEquals("opaque-token-aaa", result.getNextCursor());
+    }
+
+    @Test
+    void deliveriesListReturnsNullCursorWhenLastPage() throws Exception {
+        enqueueJson(200, "{\"deliveries\":[],\"nextCursor\":null}");
+        var result = mgmt.deliveries().list("ws_abc", "ep_1");
+        assertTrue(result.getData().isEmpty());
+        assertNull(result.getNextCursor());
+    }
+
+    @Test
+    void deliveriesListForwardsQueryParams() throws Exception {
+        enqueueJson(200, "{\"deliveries\":[],\"nextCursor\":null}");
+        mgmt.deliveries().list("ws_abc", "ep_1",
+                ListDeliveriesOptions.builder().limit(25).cursor("opaque-token-xyz").status("failed").build());
+        var req = takeRequest();
+        String path = req.getPath();
+        assertTrue(path.contains("limit=25"), "expected limit=25 in: " + path);
+        assertTrue(path.contains("cursor=opaque-token-xyz"), "expected cursor=opaque-token-xyz in: " + path);
+        assertTrue(path.contains("status=failed"), "expected status=failed in: " + path);
+    }
+
+    @Test
+    void deliveriesListOmitsUnsetQueryParams() throws Exception {
+        enqueueJson(200, "{\"deliveries\":[],\"nextCursor\":null}");
+        mgmt.deliveries().list("ws_abc", "ep_1");
+        var req = takeRequest();
+        String path = req.getPath();
+        assertFalse(path.contains("limit="), "limit should be omitted: " + path);
+        assertFalse(path.contains("cursor="), "cursor should be omitted: " + path);
+        assertFalse(path.contains("status="), "status should be omitted: " + path);
+        assertFalse(path.contains("?"), "no query string at all: " + path);
+    }
+
+    @Test
+    void deliveriesGetReturnsMetadataWithoutEnvelopeByDefault() throws Exception {
+        enqueueJson(200, "{\"id\":\"del_a\",\"idempotencyKey\":\"k1\",\"endpointId\":\"ep_1\",\"status\":\"delivered\","
+                + "\"totalAttempts\":1,\"firstAttemptAt\":\"2026-05-28T14:30:59Z\",\"deliveredAt\":\"2026-05-28T14:30:59Z\","
+                + "\"nextRetryAt\":null,\"hasPayload\":true,\"createdAt\":\"2026-05-28T14:30:59Z\",\"updatedAt\":\"2026-05-28T14:30:59Z\"}");
+        var delivery = mgmt.deliveries().get("ws_abc", "del_a");
+        var req = takeRequest();
+        assertEquals("GET", req.getMethod());
+        assertEquals("/management/v1/workspaces/ws_abc/deliveries/del_a", req.getPath());
+        assertEquals("del_a", delivery.getId());
+        assertTrue(delivery.hasPayload());
+        assertNull(delivery.getPayload(), "no envelope when includePayload is unset");
+    }
+
+    @Test
+    void deliveriesGetWithIncludePayloadReturnsEnvelope() throws Exception {
+        enqueueJson(200, "{\"id\":\"del_a\",\"idempotencyKey\":\"k1\",\"endpointId\":\"ep_1\",\"status\":\"delivered\","
+                + "\"totalAttempts\":1,\"firstAttemptAt\":\"2026-05-28T14:30:59Z\",\"deliveredAt\":\"2026-05-28T14:30:59Z\","
+                + "\"nextRetryAt\":null,\"hasPayload\":true,\"createdAt\":\"2026-05-28T14:30:59Z\",\"updatedAt\":\"2026-05-28T14:30:59Z\","
+                + "\"payload\":{\"status\":\"available\",\"data\":{\"orderId\":\"ord_123\"},\"contentType\":\"application/json\"}}");
+        var delivery = mgmt.deliveries().get("ws_abc", "del_a",
+                GetDeliveryOptions.builder().includePayload(true).build());
+        var req = takeRequest();
+        assertTrue(req.getPath().contains("include=payload"), "expected ?include=payload in: " + req.getPath());
+        assertNotNull(delivery.getPayload());
+        assertEquals("available", delivery.getPayload().getStatus());
+        assertEquals("application/json", delivery.getPayload().getContentType());
+        assertEquals("ord_123", delivery.getPayload().getData().get("orderId").asText());
+    }
+
+    @Test
+    void deliveriesGetReturnsForbiddenEnvelopeForPlanGatedWorkspace() throws Exception {
+        enqueueJson(200, "{\"id\":\"del_a\",\"idempotencyKey\":\"k1\",\"endpointId\":\"ep_1\",\"status\":\"delivered\","
+                + "\"totalAttempts\":1,\"firstAttemptAt\":null,\"deliveredAt\":\"2026-05-28T14:30:59Z\","
+                + "\"nextRetryAt\":null,\"hasPayload\":true,\"createdAt\":\"2026-05-28T14:30:59Z\",\"updatedAt\":\"2026-05-28T14:30:59Z\","
+                + "\"payload\":{\"status\":\"forbidden\"}}");
+        var delivery = mgmt.deliveries().get("ws_abc", "del_a",
+                GetDeliveryOptions.builder().includePayload(true).build());
+        assertNotNull(delivery.getPayload());
+        assertEquals("forbidden", delivery.getPayload().getStatus());
+        assertNull(delivery.getPayload().getData());
+        assertNull(delivery.getPayload().getContentType());
+    }
+
+    @Test
+    void deliveriesGetAttemptsReturnsArray() throws Exception {
+        enqueueJson(200, "["
+                + "{\"id\":\"att_1\",\"attemptNumber\":1,\"status\":\"failed\",\"responseStatusCode\":502,\"responseTimeMs\":142,\"errorMessage\":\"Bad gateway\",\"createdAt\":\"2026-05-28T14:31:00Z\"},"
+                + "{\"id\":\"att_2\",\"attemptNumber\":2,\"status\":\"success\",\"responseStatusCode\":200,\"responseTimeMs\":88,\"errorMessage\":null,\"createdAt\":\"2026-05-28T14:31:30Z\"}"
+                + "]");
+        var attempts = mgmt.deliveries().getAttempts("ws_abc", "del_a");
+        var req = takeRequest();
+        assertEquals("GET", req.getMethod());
+        assertEquals("/management/v1/workspaces/ws_abc/deliveries/del_a/attempts", req.getPath());
+        assertEquals(2, attempts.size());
+        assertEquals(1, attempts.get(0).getAttemptNumber());
+        assertEquals(502, attempts.get(0).getResponseStatusCode());
+        assertEquals("success", attempts.get(1).getStatus());
+        assertNull(attempts.get(1).getErrorMessage());
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // Headers
     // ══════════════════════════════════════════════════════════════════
 

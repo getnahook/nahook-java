@@ -344,11 +344,95 @@ class ManagementIntegrationTest {
     }
 
     // ---------------------------------------------------------------
-    // Auth error: bad token
+    // Deliveries — reads against pre-seeded fixture rows
+    //
+    // Fixture data lives in packages/db/src/seeds/test-fixtures.sql:
+    //   del_fixture_001 — delivered, hasPayload=true
+    //   del_fixture_002 — failed, 3 attempts, hasPayload=false
+    //   del_fixture_003 — delivering, hasPayload=false
+    // All three are scoped to ep_integration_test_001.
     // ---------------------------------------------------------------
 
     @Test
     @Order(7)
+    void deliveries_listReturnsSeededRowsWithOpaqueCursor() {
+        PaginatedResult<Delivery> result = mgmt.deliveries().list(
+                workspaceId, "ep_integration_test_001",
+                ListDeliveriesOptions.builder().limit(2).build());
+        assertEquals(2, result.getData().size());
+        // With 3 fixture rows and limit=2, we expect a non-null nextCursor.
+        assertNotNull(result.getNextCursor());
+        assertFalse(result.getNextCursor().isEmpty());
+        assertFalse(result.getNextCursor().startsWith("del_"),
+                "nextCursor should be opaque, not a leaky publicId: " + result.getNextCursor());
+    }
+
+    @Test
+    @Order(8)
+    void deliveries_listWithStatusFailedReturnsOneFixture() {
+        PaginatedResult<Delivery> result = mgmt.deliveries().list(
+                workspaceId, "ep_integration_test_001",
+                ListDeliveriesOptions.builder().status("failed").build());
+        assertEquals(1, result.getData().size());
+        Delivery failed = result.getData().get(0);
+        assertEquals("del_fixture_002", failed.getId());
+        assertEquals("failed", failed.getStatus());
+        assertEquals(3, failed.getTotalAttempts());
+        assertFalse(failed.hasPayload());
+    }
+
+    @Test
+    @Order(9)
+    void deliveries_getReturnsMetadataWithoutPayloadByDefault() {
+        DeliveryWithPayload delivery = mgmt.deliveries().get(workspaceId, "del_fixture_001");
+        assertEquals("del_fixture_001", delivery.getId());
+        assertEquals("ep_integration_test_001", delivery.getEndpointId());
+        assertEquals("delivered", delivery.getStatus());
+        assertTrue(delivery.hasPayload());
+        assertNull(delivery.getPayload(), "no envelope when includePayload is unset");
+    }
+
+    @Test
+    @Order(10)
+    void deliveries_getWithIncludePayloadReturnsEnvelope() {
+        DeliveryWithPayload delivery = mgmt.deliveries().get(workspaceId, "del_fixture_001",
+                GetDeliveryOptions.builder().includePayload(true).build());
+        assertNotNull(delivery.getPayload());
+        // Do not strict-assert "available": R2 wiring in the test infra may not be
+        // configured, in which case the envelope reports "error" or "not_found".
+        // All 5 status values are valid wire-level responses.
+        String status = delivery.getPayload().getStatus();
+        assertTrue(
+                java.util.Arrays.asList("available", "forbidden", "processing", "not_found", "error").contains(status),
+                "unexpected envelope status: " + status);
+    }
+
+    @Test
+    @Order(11)
+    void deliveries_getAttemptsReturnsThreeFixtureAttemptsInOrder() {
+        List<DeliveryAttempt> attempts = mgmt.deliveries().getAttempts(workspaceId, "del_fixture_002");
+        assertEquals(3, attempts.size());
+        assertEquals(1, attempts.get(0).getAttemptNumber());
+        assertEquals(2, attempts.get(1).getAttemptNumber());
+        assertEquals(3, attempts.get(2).getAttemptNumber());
+        assertEquals(502, attempts.get(0).getResponseStatusCode());
+    }
+
+    @Test
+    @Order(12)
+    void deliveries_getReturns404ForNonExistentDelivery() {
+        NahookApiException ex = assertThrows(NahookApiException.class, () ->
+                mgmt.deliveries().get(workspaceId, "del_does_not_exist_anywhere"));
+        assertEquals(404, ex.getStatus());
+        assertTrue(ex.isNotFound());
+    }
+
+    // ---------------------------------------------------------------
+    // Auth error: bad token
+    // ---------------------------------------------------------------
+
+    @Test
+    @Order(99)
     void invalidToken_throws401() {
         NahookManagement badMgmt = NahookManagement.builder("nhm_invalid_000000000000")
                 .baseUrl(apiUrl)
