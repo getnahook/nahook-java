@@ -167,8 +167,7 @@ ListResponse<Endpoint> endpoints = mgmt.endpoints().list("ws_abc");
 Endpoint endpoint = mgmt.endpoints().create("ws_abc", new CreateEndpointOptions()
     .url("https://example.com/webhooks")
     .description("Production webhook")
-    .type("webhook") // "webhook" | "slack"
-    .metadata(Map.of("team", "payments")));
+    .type("webhook")); // "webhook" | "slack"
 
 Endpoint endpoint = mgmt.endpoints().get("ws_abc", "ep_123");
 
