@@ -26,7 +26,7 @@ public class HttpClientWrapper {
 
     private static final String DEFAULT_BASE_URL = "https://api.nahook.com";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
-    private static final String SDK_VERSION = "0.1.0";
+    private static final String SDK_VERSION = "0.2.0";
     private static final String USER_AGENT = "nahook-java/" + SDK_VERSION;
     private static final long BASE_DELAY_MS = 500;
     private static final long MAX_DELAY_MS = 10_000;
