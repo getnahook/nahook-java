@@ -184,6 +184,89 @@ class ManagementIntegrationTest {
     }
 
     // ---------------------------------------------------------------
+    // Applications: maxEndpoints cap lifecycle
+    // ---------------------------------------------------------------
+
+    @Test
+    @Order(13)
+    void applicationMaxEndpointsCapLifecycle() {
+        long ts = System.currentTimeMillis();
+        String appName = "Cap Test App " + ts;
+
+        String appId = null;
+        List<String> endpointIds = new ArrayList<>();
+        try {
+            // I1: create with maxEndpoints=2 and showEventTypes=false
+            Application created = mgmt.applications().create(workspaceId,
+                    CreateApplicationOptions.builder(appName)
+                            .maxEndpoints(2)
+                            .showEventTypes(false)
+                            .build());
+            appId = created.getId();
+            assertEquals(2, created.getMaxEndpoints());
+            assertFalse(created.isShowEventTypes());
+
+            Application fetched = mgmt.applications().get(workspaceId, appId);
+            assertEquals(2, fetched.getMaxEndpoints());
+            assertFalse(fetched.isShowEventTypes());
+
+            // I2: update to maxEndpoints=1 and showEventTypes=true
+            Application updated = mgmt.applications().update(workspaceId, appId,
+                    UpdateApplicationOptions.builder()
+                            .maxEndpoints(1)
+                            .showEventTypes(true)
+                            .build());
+            assertEquals(1, updated.getMaxEndpoints());
+            assertTrue(updated.isShowEventTypes());
+
+            Application persisted = mgmt.applications().get(workspaceId, appId);
+            assertEquals(1, persisted.getMaxEndpoints());
+            assertTrue(persisted.isShowEventTypes());
+
+            // I3: first endpoint fits under the cap; second is rejected
+            final String appIdFinal = appId;
+            Endpoint first = mgmt.applications().createEndpoint(workspaceId, appId,
+                    CreateEndpointOptions.builder("https://httpbin.org/post").build());
+            assertNotNull(first.getId());
+            endpointIds.add(first.getId());
+
+            NahookApiException capEx = assertThrows(NahookApiException.class, () ->
+                    mgmt.applications().createEndpoint(workspaceId, appIdFinal,
+                            CreateEndpointOptions.builder("https://httpbin.org/post").build()));
+            assertEquals(403, capEx.getStatus());
+            assertEquals("application_endpoint_limit_reached", capEx.getCode());
+
+            // I4: disabled endpoints still count against the cap
+            mgmt.endpoints().update(workspaceId, first.getId(),
+                    UpdateEndpointOptions.builder().isActive(false).build());
+
+            NahookApiException disabledEx = assertThrows(NahookApiException.class, () ->
+                    mgmt.applications().createEndpoint(workspaceId, appIdFinal,
+                            CreateEndpointOptions.builder("https://httpbin.org/post").build()));
+            assertEquals(403, disabledEx.getStatus());
+            assertEquals("application_endpoint_limit_reached", disabledEx.getCode());
+
+            // I5: clearing the cap (explicit JSON null) lifts the limit
+            Application cleared = mgmt.applications().update(workspaceId, appId,
+                    UpdateApplicationOptions.builder().clearMaxEndpoints().build());
+            assertNull(cleared.getMaxEndpoints());
+
+            Endpoint second = mgmt.applications().createEndpoint(workspaceId, appId,
+                    CreateEndpointOptions.builder("https://httpbin.org/post").build());
+            assertNotNull(second.getId());
+            endpointIds.add(second.getId());
+        } finally {
+            // Cleanup: delete created endpoints + the application
+            for (String epId : endpointIds) {
+                try { mgmt.endpoints().delete(workspaceId, epId); } catch (Exception ignored) {}
+            }
+            if (appId != null) {
+                try { mgmt.applications().delete(workspaceId, appId); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
     // Subscriptions: create endpoint + event type, subscribe, list, unsubscribe
     // ---------------------------------------------------------------
 
