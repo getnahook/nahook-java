@@ -234,6 +234,79 @@ class ManagementResourcesTest {
         assertEquals("/management/v1/workspaces/ws_123/applications/app_1", req.getPath());
     }
 
+    // ── Applications: maxEndpoints + showEventTypes (tri-state) ──
+
+    @Test
+    void applicationsCreateWithMaxEndpointsIncludesIt() throws Exception {
+        enqueueJson(201, "{\"id\":\"app_new\",\"name\":\"Acme\",\"metadata\":{},\"maxEndpoints\":2,\"showEventTypes\":true}");
+        var result = mgmt.applications().create("ws_123",
+                CreateApplicationOptions.builder("Acme").maxEndpoints(2).build());
+        var body = parseBody(takeRequest());
+        assertEquals(2, body.get("maxEndpoints").asInt());
+        assertEquals(2, result.getMaxEndpoints());
+    }
+
+    @Test
+    void applicationsCreateWithShowEventTypesFalseIncludesIt() throws Exception {
+        enqueueJson(201, "{\"id\":\"app_new\",\"name\":\"Acme\",\"metadata\":{},\"maxEndpoints\":null,\"showEventTypes\":false}");
+        var result = mgmt.applications().create("ws_123",
+                CreateApplicationOptions.builder("Acme").showEventTypes(false).build());
+        var body = parseBody(takeRequest());
+        assertFalse(body.get("showEventTypes").asBoolean());
+        assertFalse(result.isShowEventTypes());
+    }
+
+    @Test
+    void applicationsCreateOmitsUnsetCapFields() throws Exception {
+        enqueueJson(201, "{\"id\":\"app_new\",\"name\":\"Acme\",\"metadata\":{}}");
+        mgmt.applications().create("ws_123", CreateApplicationOptions.builder("Acme").build());
+        var body = parseBody(takeRequest());
+        assertFalse(body.has("maxEndpoints"));
+        assertFalse(body.has("showEventTypes"));
+    }
+
+    @Test
+    void applicationsUpdateClearMaxEndpointsSendsExplicitNull() throws Exception {
+        enqueueJson(200, "{\"id\":\"app_1\",\"name\":\"Acme\",\"metadata\":{},\"maxEndpoints\":null,\"showEventTypes\":true}");
+        var result = mgmt.applications().update("ws_123", "app_1",
+                UpdateApplicationOptions.builder().clearMaxEndpoints().build());
+        var body = parseBody(takeRequest());
+        assertTrue(body.has("maxEndpoints"), "maxEndpoints must be present as explicit null");
+        assertTrue(body.get("maxEndpoints").isNull());
+        assertNull(result.getMaxEndpoints());
+    }
+
+    @Test
+    void applicationsUpdateOmitsCapFieldsWhenUnset() throws Exception {
+        enqueueJson(200, "{\"id\":\"app_1\",\"name\":\"Renamed\",\"metadata\":{}}");
+        mgmt.applications().update("ws_123", "app_1",
+                UpdateApplicationOptions.builder().name("Renamed").build());
+        var body = parseBody(takeRequest());
+        assertFalse(body.has("maxEndpoints"));
+        assertFalse(body.has("showEventTypes"));
+    }
+
+    @Test
+    void applicationsUpdateMaxEndpointsValueAndResponseFields() throws Exception {
+        enqueueJson(200, "{\"id\":\"app_1\",\"name\":\"Acme\",\"metadata\":{},\"maxEndpoints\":5,\"showEventTypes\":false}");
+        var result = mgmt.applications().update("ws_123", "app_1",
+                UpdateApplicationOptions.builder().maxEndpoints(5).showEventTypes(false).build());
+        var body = parseBody(takeRequest());
+        assertEquals(5, body.get("maxEndpoints").asInt());
+        assertFalse(body.get("showEventTypes").asBoolean());
+        assertEquals(5, result.getMaxEndpoints());
+        assertFalse(result.isShowEventTypes());
+    }
+
+    @Test
+    void applicationsResponseDefaultsShowEventTypesWhenAbsent() throws Exception {
+        enqueueJson(200, "{\"id\":\"app_1\",\"name\":\"My App\",\"metadata\":{}}");
+        var result = mgmt.applications().get("ws_123", "app_1");
+        takeRequest();
+        assertNull(result.getMaxEndpoints());
+        assertTrue(result.isShowEventTypes());
+    }
+
     @Test
     void applicationsListEndpoints() throws Exception {
         enqueueJson(200, "[{\"id\":\"ep_1\",\"url\":\"https://example.com\",\"isActive\":true,\"type\":\"webhook\"}]");
