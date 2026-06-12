@@ -52,6 +52,10 @@
         <jackson.version>2.17.2</jackson.version>
         <junit.version>5.10.3</junit.version>
         <okhttp.version>4.12.0</okhttp.version>
+        <!-- false = stop at Central Portal staging (human gate before the
+             artifact is immutable). The publish workflow can override with
+             -DcentralAutoPublish=true for a fully automated release. -->
+        <centralAutoPublish>false</centralAutoPublish>
     </properties>
 
     <dependencies>
@@ -163,7 +167,7 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
-                            <autoPublish>false</autoPublish>
+                            <autoPublish>${centralAutoPublish}</autoPublish>
                         </configuration>
                     </plugin>
                 </plugins>
